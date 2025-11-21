@@ -1,53 +1,77 @@
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
-from threading import Thread
+from datetime import datetime
 import time
+import threading
 
 
 class IBapi(EWrapper, EClient):
     def __init__(self):
         EClient.__init__(self, self)
+        self.pair = None
+        self.current_bars = []
 
-    def nextValidId(self, orderId: int):
-        print("Connected. Next Order ID:", orderId)
+    # def error(self, reqId, errorCode, errorString, advancedOrderRejectJson="", errorTime=""):
+    #     if errorCode in [2104, 2106, 2158]:
+    #         return
+    #     print(f"Error: {errorCode} - {errorString}")
 
     def error(self, reqId, errorCode, errorString):
         print("IB ERROR", reqId, errorCode, errorString)
 
-    def tickPrice(self, reqId, tickType, price, attrib):
-        print("Tick Price:", "Ticker:", reqId, "Type:", tickType, "Price:", price)
+    def historicalData(self, reqId, bar):
+        self.current_bars.append(bar)
+
+    def historicalDataEnd(self, reqId, start, end):
+        if self.current_bars:
+            bar = self.current_bars[-1]
+            current_time = datetime.now().strftime('%H:%M:%S')
+            print(f"{current_time} - {self.pair} @ {bar.close:.6f}")
+        self.current_bars = []
 
 
-def stock_contract(symbol: str):
-    contract = Contract()
-    contract.symbol = symbol
-    contract.secType = "STK"
-    contract.exchange = "SMART"
-    contract.currency = "USD"
-    return contract
-
-
-def main():
+def monitor_forex(symbol, currency, update_interval=15, port=4001):
     app = IBapi()
-    print("Connecting to TWS…")
-    app.connect("127.0.0.1", 4001, clientId=1)
+    app.connect('127.0.0.1', port, 123)
+    app.pair = f"{symbol}/{currency}"
 
-    # Start socket listener
-    api_thread = Thread(target=app.run, daemon=True)
+    api_thread = threading.Thread(target=lambda: app.run(), daemon=True)
     api_thread.start()
 
-    time.sleep(2)  # wait for connection
+    time.sleep(2)
 
-    # THIS SYMBOL ALWAYS RETURNS DELAYED DATA IF ENABLED:
-    ibkr = stock_contract("IBKR")
+    contract = Contract()
+    contract.symbol = symbol
+    contract.secType = "CASH"
+    contract.exchange = "IDEALPRO"
+    contract.currency = currency
 
-    # Request delayed snapshot = True
-    app.reqMktData(1, ibkr, "", True, False, [])
+    print(f"\n{symbol}/{currency} (updates every {update_interval}s)")
 
-    time.sleep(5)  # allow time for response
-    app.disconnect()
+    try:
+        req_id = 1
+        while True:
+            app.reqHistoricalData(
+                reqId=req_id,
+                contract=contract,
+                endDateTime='',
+                durationStr='60 S',
+                barSizeSetting='30 secs',
+                whatToShow='MIDPOINT',
+                useRTH=0,
+                formatDate=1,
+                keepUpToDate=False,
+                chartOptions=[]
+            )
+
+            req_id += 1
+            time.sleep(update_interval)
+
+    except KeyboardInterrupt:
+        print("\nStopping...")
+        app.disconnect()
 
 
-if __name__ == "__main__":
-    main()
+monitor_forex('EUR', 'USD', update_interval=15)
+
