@@ -57,27 +57,34 @@ def optimize_momentum_strategy(price_series, n_values, commission):
     return best_result, best_n, best_sharpe
 
 
-# --- TESTING BLOCK ---
-ticker = "AAPL"
+# ============================
+# STEP 3 — Run for many tickers
+# ============================
 
-data = yf.download(ticker, start="2020-01-01", end="2025-01-01", interval="1d", auto_adjust=True)
-price = data["Close"].astype(float).squeeze()
+tickers = ["AAPL", "AMZN", "MSFT", "TSLA", "GOOGL"]
 
-n_values = [3, 5, 10, 20, 30]
+all_returns = []
+results = {}
+
+n_values = [3, 5, 10, 20, 30, 50]
 commission = 0.001
 
-test_df = momentum_strategy(price, n=5, commission=commission)
-print("Momentum strategy test output:")
-print(test_df.head())
+for t in tickers:
+    print(f"\n=== Optimizing {t} ===")
+    data = yf.download(t, start="2020-01-01", end="2025-01-01", interval="1d", auto_adjust=True)
+    price = data["Close"].astype(float)
+    price = price.iloc[:, 0] if isinstance(price, pd.DataFrame) else price
 
-best_df, best_n, best_sharpe = optimize_momentum_strategy(price, n_values, commission)
 
-print("Optimization results:")
-print("Best n =", best_n)
-print("Best Sharpe =", best_sharpe)
-print(best_df.tail())
+    best_df, best_n, best_sharpe = optimize_momentum_strategy(price, n_values, commission)
 
-plt.figure(figsize=(10,5))
-plt.plot(best_df["Equity"])
-plt.title(f"Momentum Strategy Equity Curve (Best n={best_n})")
-plt.show()
+    print(f"Best n for {t}: {best_n}, Sharpe={best_sharpe:.3f}")
+
+    results[t] = best_df
+
+    all_returns.append(best_df["Strategy_return"].rename(t))
+
+returns_df = pd.concat(all_returns, axis=1).dropna()
+print("\nCombined returns data:")
+print(returns_df.head())
+
