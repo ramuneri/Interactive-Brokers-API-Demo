@@ -1,9 +1,9 @@
+import math
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import yfinance as yf
 import matplotlib.pyplot as plt
-import seaborn as sns
-import math
 
 
 def momentum_strategy(price_series, n, commission):
@@ -15,31 +15,32 @@ def momentum_strategy(price_series, n, commission):
     df.loc[df["Momentum"] > 0, "Signal"] = 1
     df.loc[df["Momentum"] < 0, "Signal"] = -1
 
+    # Daily profit calculation
     df["Trade_cost"] = 0.0
     df.loc[df["Signal"].diff() != 0, "Trade_cost"] = df["Close"] * commission
 
     df["Daily_change"] = df["Close"].diff().fillna(0)
-    df["Daily_profit"] = (df["Daily_change"] * df["Signal"].shift(1).fillna(0) - df["Trade_cost"]    )
+    df["Daily_profit"] = (df["Daily_change"] * df["Signal"].shift(1).fillna(0) - df["Trade_cost"])
 
-    # Convert to percentage return (required for portfolio math)
-    df["Strategy_return"] = df["Daily_profit"] / df["Close"].shift(1)
-    df["Strategy_return"] = df["Strategy_return"].replace([np.inf, -np.inf], 0).fillna(0)
+    # Daily profit in % (needed for portfolio math)
+    df["Return_pct"] = df["Daily_profit"] / df["Close"].shift(1)
+    df["Return_pct"] = df["Return_pct"].replace([np.inf, -np.inf], 0).fillna(0)
 
-    # Equity curve
-    df["Equity"] = (1 + df["Strategy_return"]).cumprod()
+    # Cumulative return curve
+    df["Equity"] = (1 + df["Return_pct"]).cumprod()
 
     return df
 
 
 def optimize_momentum_strategy(price_series, n_values, commission):
     best_sharpe = -999
-    best_n = None
-    best_result = None
+    best_n = 0
+    best_result = 0
 
     for n in n_values:
         df = momentum_strategy(price_series, n, commission)
 
-        r = df["Strategy_return"].replace([np.inf, -np.inf], np.nan).dropna()
+        r = df["Return_pct"].replace([np.inf, -np.inf], np.nan).dropna()
         if len(r) < 30:
             continue
 
@@ -58,7 +59,7 @@ tickers = ["AAPL", "AMZN", "MSFT", "TSLA", "GOOGL", "BP", "GLD", "SPOT", "BKNG",
 start="2010-01-01"
 end="2020-01-01"
 
-n_values = [3, 5, 10, 20, 30, 50, 70, 100]
+n_values = list(range(5, 251, 5))
 commission = 0.001
 
 all_returns = []
@@ -75,7 +76,7 @@ for t in tickers:
     print(f"{t}: best n = {best_n}, Sharpe = {best_sharpe:.3f}")
 
     results[t] = best_df
-    all_returns.append(best_df["Strategy_return"].rename(t))
+    all_returns.append(best_df["Return_pct"].rename(t))
 
 # Combine daily strategy returns
 returns_df = pd.concat(all_returns, axis=1).dropna()
