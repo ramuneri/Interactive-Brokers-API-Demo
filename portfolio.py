@@ -53,7 +53,7 @@ def optimize_momentum_strategy(price_series, n_values, commission):
     return best_result, best_n, best_sharpe
 
 
-tickers = ["AAPL", "AMZN", "MSFT", "TSLA", "GOOGL", "BP", "GLD", "SPOT", "BKNG", "NDAQ"]
+tickers = ["AAPL", "AMZN", "MSFT", "TSLA", "GOOGL", "BP", "GLD", "SPOT", "BKNG", "META"]
 
 start="2010-01-01"
 end="2020-01-01"
@@ -111,6 +111,9 @@ for i, t in enumerate(tickers):
     plt.plot(price_data["Close"])
     plt.title(t)
     plt.grid(True)
+    plt.xticks(rotation=25)
+    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(6))
+
 
 # 2. BAD TOTAL (sum of strategy equity curves — WRONG METHOD)
 bad_total = (1 + returns_df).cumprod().sum(axis=1)
