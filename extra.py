@@ -19,8 +19,8 @@ def ma_strategy(price_series):
     df.loc[df["MA20"] > df["MA50"], "Signal"] = 1
 
     df["Return"] = df["Close"].pct_change()
-    df["Strategy_return"] = df["Signal"].shift(1) * df["Return"]
-    df["Strategy_return"] = df["Strategy_return"].fillna(0)
+    df["Strategy_return"] = (df["Return"] * df["Signal"].shift(1)).fillna(0)
+
 
     df["Equity"] = (1 + df["Strategy_return"]).cumprod()
     return df

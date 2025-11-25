@@ -28,7 +28,6 @@ def momentum_strategy(price_series, n, commission):
 
     # Cumulative return curve
     df["Equity"] = (1 + df["Return_pct"]).cumprod()
-
     return df
 
 
