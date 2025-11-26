@@ -33,7 +33,6 @@ def momentum_strategy(price_series, n, commission):
 
     return df
 
-
 # Optimization with brute force
 def optimize_momentum_strategy(price_series, n_values, commission):    
     best_sharpe = -999
@@ -81,7 +80,6 @@ for t in tickers:
 
 returns_df = pd.concat(all_returns, axis=1).dropna()
 
-
 # Graphs
 plt.figure(figsize=(18, 12))
 cols = 4
@@ -104,7 +102,6 @@ plt.title("Equal-Weight Portfolio Equity")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
 
 # Correlation matrix
 corr = returns_df.corr()
